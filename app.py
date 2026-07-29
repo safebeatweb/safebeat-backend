@@ -44,10 +44,18 @@ _groq_client = None
 
 
 def get_groq_client():
+    """Builds the Groq client once and reuses it. Wrapped in try/except so
+    a library-version mismatch (e.g. an old groq/httpx combo) can never
+    crash the whole request with an unhandled 500 — it just falls back
+    to reporting the assistant as unavailable, same as a missing key."""
     global _groq_client
     if _groq_client is None and GROQ_API_KEY:
-        from groq import Groq
-        _groq_client = Groq(api_key=GROQ_API_KEY)
+        try:
+            from groq import Groq
+            _groq_client = Groq(api_key=GROQ_API_KEY)
+        except Exception as e:
+            print(f"Could not construct Groq client: {e}")
+            return None
     return _groq_client
 
 
@@ -74,7 +82,7 @@ def chat():
     client = get_groq_client()
     if not client:
         return jsonify({
-            "reply": "The assistant is not connected yet. Add GROQ_API_KEY as a Space secret."
+            "reply": "The assistant is not connected yet. Add GROQ_API_KEY as an environment variable in Render."
         }), 503
 
     try:
@@ -256,7 +264,7 @@ def ensure_firebase():
 
     if not key_json or not db_url:
         raise RuntimeError(
-            "FIREBASE_KEY_JSON and FIREBASE_DB_URL must be set as Space secrets "
+            "FIREBASE_KEY_JSON and FIREBASE_DB_URL must be set as environment variables "
             "for /analyze_latest to work."
         )
 
