@@ -82,7 +82,7 @@ def chat():
     client = get_groq_client()
     if not client:
         return jsonify({
-            "reply": "The assistant is not connected yet. Add GROQ_API_KEY as an environment variable in Render."
+            "reply": "The assistant is temporarily unavailable. Please try again later."
         }), 503
 
     try:
@@ -245,7 +245,8 @@ def analyze_signal():
         result = classify_signal(signal, sample_rate_hz)
         return jsonify(result)
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"analyze_signal error: {e}")  # full detail stays in the server logs only
+        return jsonify({"error": "A problem occurred while processing this request. Please try again shortly."}), 500
 
 
 _firebase_initialized = False
@@ -263,10 +264,7 @@ def ensure_firebase():
     db_url = os.environ.get("FIREBASE_DB_URL")
 
     if not key_json or not db_url:
-        raise RuntimeError(
-            "FIREBASE_KEY_JSON and FIREBASE_DB_URL must be set as environment variables "
-            "for /analyze_latest to work."
-        )
+        raise RuntimeError("Firebase is not configured on this server yet.")
 
     if not firebase_admin._apps:
         cred = credentials.Certificate(json.loads(key_json))
@@ -301,13 +299,15 @@ def analyze_latest():
             return jsonify({"error": "No recent ECG data found in Firebase."}), 404
 
     except Exception as e:
-        return jsonify({"error": f"Could not read from Firebase: {e}"}), 500
+        print(f"analyze_latest Firebase error: {e}")  # full detail stays in the server logs only
+        return jsonify({"error": "A problem occurred while fetching live data. Please try again shortly."}), 500
 
     try:
         result = classify_signal(signal, sample_rate_hz)
         return jsonify(result)
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"analyze_latest classify_signal error: {e}")  # full detail stays in the server logs only
+        return jsonify({"error": "A problem occurred while processing this request. Please try again shortly."}), 500
 
 
 @app.route("/")
