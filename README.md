@@ -22,6 +22,8 @@ Combined Flask backend for the SafeBeat website:
 | `GROQ_API_KEY`        | Your Groq API key (for the chatbot)                                    |
 | `FIREBASE_KEY_JSON`   | The **full text** of your Firebase service-account JSON key file       |
 | `FIREBASE_DB_URL`     | Your Firebase Realtime Database URL, e.g. `https://genius-final-default-rtdb.europe-west1.firebasedatabase.app/` |
+| `RESEND_API_KEY`      | Your Resend API key (for the contact form's email notifications) — get one free at https://resend.com |
+| `CONTACT_RECIPIENT_EMAIL` | *(optional)* Comma-separated email(s) to receive contact-form submissions. Defaults to the two co-founder emails already in the code. |
 
 Never commit these values into any file in this repo — always set them as
 environment variables/secrets in your hosting platform's dashboard instead.

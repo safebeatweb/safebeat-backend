@@ -102,11 +102,57 @@ def chat():
 # --------------------------------------------------------------
 # Contact form
 # --------------------------------------------------------------
-# Note: Hugging Face Spaces free tier storage is not guaranteed to
-# persist across restarts/rebuilds. This is fine for a science-fair
-# demo contact form; for production use, swap this for a real
-# database or an email-forwarding service.
+# Every submission is emailed straight to the SafeBeat team via Resend
+# (a free transactional email API — https://resend.com, 100 emails/day
+# free, no credit card required, well within this project's volume).
+# It's also appended to a local backup log file in case the email send
+# ever fails, though Render's free-tier disk isn't guaranteed to persist
+# across restarts, so the email is the real source of truth.
 CONTACT_LOG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "contact_messages.jsonl")
+
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
+# Where contact-form submissions get emailed to. Defaults to the two
+# co-founder addresses already shown on the site; override with the
+# CONTACT_RECIPIENT_EMAIL env var if you ever want to change this
+# without editing code.
+CONTACT_RECIPIENT_EMAILS = os.environ.get(
+    "CONTACT_RECIPIENT_EMAIL",
+    "amine6ouragini@gmail.com,youssefbrahim445@gmail.com"
+).split(",")
+
+
+def send_contact_email(name, email, subject, message):
+    """Sends the contact-form submission as an email via Resend. Returns
+    True on success, False on any failure (never raises) so a broken
+    email integration can never take down the contact form itself."""
+    if not RESEND_API_KEY:
+        print("RESEND_API_KEY not set — skipping email send, saved to local log only.")
+        return False
+
+    try:
+        import requests
+        response = requests.post(
+            "https://api.resend.com/emails",
+            headers={"Authorization": f"Bearer {RESEND_API_KEY}"},
+            json={
+                # Resend's free tier requires the "from" address to be on
+                # their shared, pre-verified onboarding domain unless you
+                # verify your own domain with them.
+                "from": "SafeBeat Website <onboarding@resend.dev>",
+                "to": CONTACT_RECIPIENT_EMAILS,
+                "replyTo": email,
+                "subject": f"[SafeBeat contact form] {subject or 'New message'}",
+                "text": f"From: {name} <{email}>\n\n{message}",
+            },
+            timeout=10,
+        )
+        if response.status_code >= 300:
+            print(f"Resend email failed ({response.status_code}): {response.text}")
+            return False
+        return True
+    except Exception as e:
+        print(f"Could not send contact email: {e}")
+        return False
 
 
 @app.route("/save_user", methods=["POST"])
@@ -127,6 +173,8 @@ def save_user():
             f.write(json.dumps({"name": name, "email": email, "subject": subject, "message": message}) + "\n")
     except Exception:
         pass  # don't fail the request just because logging to disk failed
+
+    send_contact_email(name, email, subject, message)
 
     return jsonify({"message": "Thank you. Your message was saved."})
 
