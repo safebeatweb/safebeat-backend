@@ -111,13 +111,18 @@ def chat():
 CONTACT_LOG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "contact_messages.jsonl")
 
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
-# Where contact-form submissions get emailed to. Defaults to the two
-# co-founder addresses already shown on the site; override with the
-# CONTACT_RECIPIENT_EMAIL env var if you ever want to change this
-# without editing code.
+# Where contact-form submissions get emailed to. Defaults to Amine's
+# email. IMPORTANT: while using Resend's free "onboarding@resend.dev"
+# sandbox sender (no custom domain verified), Resend will ONLY deliver
+# to the exact email address used to sign up for the Resend account —
+# sending to any other address is silently rejected (no email, no
+# visible error to the site visitor, only a log line on the server).
+# Once a custom domain is verified with Resend, this restriction goes
+# away and CONTACT_RECIPIENT_EMAIL can be a comma-separated list of any
+# addresses, e.g. "amine6ouragini@gmail.com,youssefbrahim445@gmail.com".
 CONTACT_RECIPIENT_EMAILS = os.environ.get(
     "CONTACT_RECIPIENT_EMAIL",
-    "amine6ouragini@gmail.com,youssefbrahim445@gmail.com"
+    "amine6ouragini@gmail.com"
 ).split(",")
 
 
